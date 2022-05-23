@@ -15,8 +15,9 @@ class SlackBot extends Adapter
   # @param {Object} options.rtm - RTM configuration options for SlackClient
   # @param {Object} options.rtmStart - options for `rtm.start` Web API method
   ###
-  constructor: (@robot, @options) ->
-    super
+  constructor: (robot, @options) ->
+    super robot
+    @robot = robot
     @robot.logger.info "hubot-slack adapter v#{pkg.version}"
     @client = new SlackClient @options, @robot
 
@@ -37,6 +38,7 @@ class SlackBot extends Adapter
     # SlackClient event handlers
     @client.rtm.on "open", @open
     @client.rtm.on "close", @close
+    @client.rtm.on "disconnect", @disconnect
     @client.rtm.on "error", @error
     @client.rtm.on "authenticated", @authenticated
     @client.onEvent @eventHandler
@@ -177,16 +179,24 @@ class SlackBot extends Adapter
   # @private
   ###
   close: =>
-    @robot.logger.info "Disconnected from Slack RTM"
     # NOTE: not confident that @options.autoReconnect works
     if @options.autoReconnect
+      @robot.logger.info "Disconnected from Slack RTM"
       @robot.logger.info "Waiting for reconnect..."
     else
-      @robot.logger.info "Exiting..."
-      @client.disconnect()
-      # NOTE: Node recommends not to call process.exit() but Hubot itself uses this mechanism for shutting down
-      # Can we make sure the brain is flushed to persistence? Do we need to cleanup any state (or timestamp anything)?
-      process.exit 1
+      @disconnect()
+
+  ###*
+  # Slack client has closed the connection and will not reconnect
+  # @private
+  ###
+  disconnect: =>
+    @robot.logger.info "Disconnected from Slack RTM"
+    @robot.logger.info "Exiting..."
+    @client.disconnect()
+    # NOTE: Node recommends not to call process.exit() but Hubot itself uses this mechanism for shutting down
+    # Can we make sure the brain is flushed to persistence? Do we need to cleanup any state (or timestamp anything)?
+    process.exit 1
 
   ###*
   # Slack client received an error
@@ -229,7 +239,7 @@ class SlackBot extends Adapter
 
       # Hubot expects all user objects to have a room property that is used in the envelope for the message after it
       # is received
-      user.room = if channel? then channel else ""
+      user.room = channel ? ""
 
       switch event.subtype
         when "bot_message"
@@ -287,9 +297,9 @@ class SlackBot extends Adapter
 
       @robot.logger.debug "Received presence update message for users: #{u.id for u in users} with status: #{event.presence}"
       @receive new PresenceMessage(users, event.presence)
-      
+
     else if event.type is "file_shared"
-    
+
       # Once again Hubot expects all user objects to have a room property that is used in the envelope for the message
       # after it is received. If the reaction is to a message, then the `event.item.channel` contain a conversation ID.
       # Otherwise reactions can be on files and file comments, which are "global" and aren't contained in a
