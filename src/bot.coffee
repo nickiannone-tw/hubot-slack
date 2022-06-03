@@ -1,11 +1,12 @@
 {Adapter, TextMessage, EnterMessage, LeaveMessage, TopicMessage, CatchAllMessage} = require.main.require "hubot"
-{SlackTextMessage, ReactionMessage, PresenceMessage, FileSharedMessage}           = require "./message"
-SlackClient                                                                       = require "./client"
-pkg                                                                               = require "../package"
 
 # Requires the es2015 version of Hubot for v3 or higher so the correct prototype is updated
 if Adapter.name == "CoffeeScriptCompatibleClass"
-  {Adapter} = require.main.require "hubot/es2015"
+  {Adapter, TextMessage, EnterMessage, LeaveMessage, TopicMessage, CatchAllMessage} = require.main.require "hubot/es2015"
+
+{SlackTextMessage, ReactionMessage, PresenceMessage, FileSharedMessage}           = require "./message"
+SlackClient                                                                       = require "./client"
+pkg                                                                               = require "../package"
 
 class SlackBot extends Adapter
 
